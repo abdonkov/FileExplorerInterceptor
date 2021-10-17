@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.31729.503
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FileExplorerInterceptor", "FileExplorerInterceptor\FileExplorerInterceptor.csproj", "{A55A0FBA-6F01-4BE7-B375-29ABB07F9C2E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FileExplorerInterceptor.WindowsShellHelper", "FileExplorerInterceptor.WindowsShellHelper\FileExplorerInterceptor.WindowsShellHelper.csproj", "{F175573E-AF8C-4DD1-99C3-52A1701BC64D}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{A55A0FBA-6F01-4BE7-B375-29ABB07F9C2E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A55A0FBA-6F01-4BE7-B375-29ABB07F9C2E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A55A0FBA-6F01-4BE7-B375-29ABB07F9C2E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A55A0FBA-6F01-4BE7-B375-29ABB07F9C2E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F175573E-AF8C-4DD1-99C3-52A1701BC64D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F175573E-AF8C-4DD1-99C3-52A1701BC64D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F175573E-AF8C-4DD1-99C3-52A1701BC64D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F175573E-AF8C-4DD1-99C3-52A1701BC64D}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {0DB997A1-9C6F-4C6C-B2C7-4E054E451282}
+	EndGlobalSection
+EndGlobal
