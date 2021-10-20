@@ -1,13 +1,15 @@
-﻿using FileExplorerInterceptor.Properties;
-using FileExplorerInterceptor.WindowsShellHelper;
+﻿using FileExplorerInterceptor.Interop;
+using FileExplorerInterceptor.Interop.Delegates;
+using FileExplorerInterceptor.Models;
+using FileExplorerInterceptor.Properties;
+using FileExplorerInterceptor.Shell;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Primitives;
 using System;
 using System.Diagnostics;
-using System.Drawing;
 using System.IO;
+using System.Text;
 using System.Text.RegularExpressions;
-using System.Windows.Automation;
 using System.Windows.Forms;
 
 namespace FileExplorerInterceptor
@@ -19,9 +21,12 @@ namespace FileExplorerInterceptor
         private IConfiguration configuration;
         private AppSettings config;
 
+        private WinEventDelegate winEventDelegate = null;
+        private IntPtr winEventHook;
+
         private Regex specialFolderRegex = new Regex("(^%.*?%)", RegexOptions.Compiled);
-        private Regex directoryArgumentRegex = new Regex("<(d|D)>");
-        private Regex selectedItemArgumentRegex = new Regex("<(s|S)>");
+        private Regex directoryArgumentRegex = new Regex("<(d|D)>", RegexOptions.Compiled);
+        private Regex selectedItemArgumentRegex = new Regex("<(s|S)>", RegexOptions.Compiled);
 
         public TrayIconApplicationContext()
         {
@@ -50,27 +55,27 @@ namespace FileExplorerInterceptor
             ChangeToken.OnChange(() => configuration.GetReloadToken(), () => configuration.Bind(config));
 
             // Register window open handler
-            Automation.AddAutomationEventHandler(
-                WindowPattern.WindowOpenedEvent,
-                AutomationElement.RootElement,
-                TreeScope.Children,
-                OnWindowOpenedHandler);
+            winEventDelegate = new WinEventDelegate(OnWindowOpenHandler);
+            winEventHook = User32.SetWinEventHook(User32.EVENT_OBJECT_CREATE, User32.EVENT_OBJECT_CREATE, IntPtr.Zero, winEventDelegate, 0, 0, User32.WINEVENT_OUTOFCONTEXT);
         }
 
-        private void OnWindowOpenedHandler(object sender, AutomationEventArgs e)
+        private void OnWindowOpenHandler(IntPtr hWinEventHook, uint eventType, IntPtr hwnd, int idObject, int idChild, uint dwEventThread, uint dwmsEventTime)
         {
             try
             {
-                var element = sender as AutomationElement;
-                if (element == null) return;
+                var windowClass = new StringBuilder(255);
+                User32.RealGetWindowClass(hwnd, windowClass, 255);
 
-                if (element.Current.ClassName == "CabinetWClass") // Class of all file explorer windows
+                if (windowClass.ToString() == "CabinetWClass")
                 {
-                    var process = Process.GetProcessById(element.Current.ProcessId);
-                    if (process.ProcessName == "explorer") // check if the process is explorer, because other windows can use the same class
+                    User32.GetWindowThreadProcessId(hwnd, out IntPtr pid);
+                    var process = Process.GetProcessById(pid.ToInt32());
+                    if (process.ProcessName == "explorer")
                     {
                         // Try to get opened directory data and close the explorer windows if inside a directory
-                        var openedDirectoryData = ShellReader.CloseFileExplorerIfDirectoryOpenedAndGetDirectoryPath(element.Current.NativeWindowHandle, true);
+                        var openedDirectoryData = ShellReader.CloseFileExplorerIfDirectoryOpenedAndGetDirectoryPath(
+                            hwnd.ToInt32(), withSelectedItems: true, out bool foundWindow, searchUntilFound: true, maxSearchTime: TimeSpan.FromSeconds(1));
+
                         if (openedDirectoryData != null
                             && !string.IsNullOrWhiteSpace(openedDirectoryData.Path))
                         {
@@ -135,7 +140,7 @@ namespace FileExplorerInterceptor
         {
             trayIcon.Visible = false;
 
-            Automation.RemoveAllEventHandlers();
+            User32.UnhookWinEvent(winEventHook);
 
             Application.Exit();
         }
