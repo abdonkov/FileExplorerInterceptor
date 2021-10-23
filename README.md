@@ -24,7 +24,7 @@ This problem probably happens only with Browsers *(Chrome, Firefox)* and Electro
 
 This is an application that only has a tray icon in the system tray (mainly for easier exit if needed) and runs in the background.
 
-- The application watches for Window Creation Events *(through Windows Automation API)*.
+- The application watches for Window Creation Events *(by setting a WinEventHook from the Win32 API)*.
 
 - When a new file explorer window is created, the application checks what folder is opened and what files are selected *(through Shell Objects for Scripting API)*.
 
@@ -77,9 +77,9 @@ When the functionallity is implemented by the "Files" file manager I will change
 
 ## Limitations
 
-1. Because the Window Creation Event is not immediate, there is a slight delay where the File Explorer is visible before it is closed.
+1. There is a slight delay where the File Explorer is visible before it is closed, because until a newly created window is visible, it's state can't be changed (hid or minimized for example).
 
-    *Technically, there is a way to hook into the window creation much earlier, but to do it globally, DLL injection will be needed which isn't a very good approach and I'm also not really familiar with that.*
+    *Technically, there is a way to hook into the window creation and make it start hidden or minimized, but to do it globally, DLL injection will be needed which is a little hacky approach and I'm also not really familiar with that (for now).*
 
 2. When a File Explorer is alredy opened in the given directory, Windows just focuses the existing window instead of creating a new one and thus our approach doesn't work.
 
