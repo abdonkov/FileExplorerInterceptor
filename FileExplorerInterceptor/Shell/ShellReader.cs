@@ -1,4 +1,5 @@
-﻿using FileExplorerInterceptor.Models;
+﻿using FileExplorerInterceptor.Interop;
+using FileExplorerInterceptor.Models;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -10,9 +11,9 @@ namespace FileExplorerInterceptor.Shell
 {
     public static class ShellReader
     {
-        public static OpenedDirectoryData CloseFileExplorerIfDirectoryOpenedAndGetDirectoryPath(long windowHandle, bool withSelectedItems, out bool hasFoundWindow, bool searchUntilFound, TimeSpan maxSearchTime, int waitBeforeNextRetryInMs = 30)
+        public static OpenedDirectoryData CloseFileExplorerIfDirectoryOpenedAndGetDirectoryPath(long windowHandle, bool withSelectedItems, out bool hasFoundWindow, bool searchUntilFound, TimeSpan maxSearchTime, TimeSpan maxSearchTimeForSelectedItems, int waitBeforeNextRetryInMs = 30)
         {
-            return GetFileExplorerOpenedDirectoryDataIfAny(windowHandle, withSelectedItems, out hasFoundWindow, searchUntilFound, maxSearchTime, waitBeforeNextRetryInMs,
+            return GetFileExplorerOpenedDirectoryDataIfAny(windowHandle, withSelectedItems, out hasFoundWindow, searchUntilFound, maxSearchTime, maxSearchTimeForSelectedItems, waitBeforeNextRetryInMs,
             (item, itemType) =>
             {
                 try
@@ -23,7 +24,7 @@ namespace FileExplorerInterceptor.Shell
             });
         }
 
-        public static OpenedDirectoryData GetFileExplorerOpenedDirectoryDataIfAny(long windowHandle, bool withSelectedItems, out bool hasFoundWindow, bool searchUntilFound, TimeSpan maxSearchTime, int waitBeforeNextRetryInMs = 30, Action<object, Type> onFoundItemAction = null)
+        public static OpenedDirectoryData GetFileExplorerOpenedDirectoryDataIfAny(long windowHandle, bool withSelectedItems, out bool hasFoundWindow, bool searchUntilFound, TimeSpan maxSearchTime, TimeSpan maxSearchTimeForSelectedItems, int waitBeforeNextRetryInMs = 30, Action<object, Type> onFoundItemAction = null)
         {
             hasFoundWindow = false;
 
@@ -78,28 +79,41 @@ namespace FileExplorerInterceptor.Shell
                                         if (withSelectedItems)
                                         {
                                             // Read selected items
-                                            try
+                                            long elapsedTicksOnSelectedItemsSearchStart = stopwatch.ElapsedTicks;
+                                            long remainingTicks = maxSearchTimeTicks - elapsedTicksOnSelectedItemsSearchStart;
+                                            long maxSearchTimeForSelectedItemsTicks = maxSearchTimeForSelectedItems.Ticks < remainingTicks ? maxSearchTimeForSelectedItems.Ticks : remainingTicks;
+                                            bool selectedItemsFound = false;
+
+                                            do
                                             {
-                                                object document = itemType.InvokeMember("Document", BindingFlags.GetProperty, null, item, null);
-                                                Type documentType = document.GetType();
-
-                                                object selectedItems = documentType.InvokeMember("SelectedItems", BindingFlags.InvokeMethod, null, document, null);
-                                                Type selectedItemsType = selectedItems.GetType();
-
-                                                int selectedItemsCount = (int)selectedItemsType.InvokeMember("Count", BindingFlags.GetProperty, null, selectedItems, null);
-                                                for (int j = 0; j < selectedItemsCount; j++)
+                                                try
                                                 {
-                                                    object selectedItem = selectedItemsType.InvokeMember("Item", BindingFlags.InvokeMethod, null, selectedItems, new object[] { j });
-                                                    Type selectedItemType = selectedItem.GetType();
+                                                    object document = itemType.InvokeMember("Document", BindingFlags.GetProperty, null, item, null);
+                                                    Type documentType = document.GetType();
 
-                                                    string selectedItemName = selectedItemType.InvokeMember("Name", BindingFlags.GetProperty, null, selectedItem, null) as string;
-                                                    if (!string.IsNullOrWhiteSpace(selectedItemName))
+                                                    object selectedItems = documentType.InvokeMember("SelectedItems", BindingFlags.InvokeMethod, null, document, null);
+                                                    Type selectedItemsType = selectedItems.GetType();
+
+                                                    int selectedItemsCount = (int)selectedItemsType.InvokeMember("Count", BindingFlags.GetProperty, null, selectedItems, null);
+                                                    for (int j = 0; j < selectedItemsCount; j++)
                                                     {
-                                                        openedDirectoryData.SelectedItems.Add(selectedItemName);
+                                                        selectedItemsFound = true;
+
+                                                        object selectedItem = selectedItemsType.InvokeMember("Item", BindingFlags.InvokeMethod, null, selectedItems, new object[] { j });
+                                                        Type selectedItemType = selectedItem.GetType();
+
+                                                        string selectedItemName = selectedItemType.InvokeMember("Name", BindingFlags.GetProperty, null, selectedItem, null) as string;
+                                                        if (!string.IsNullOrWhiteSpace(selectedItemName))
+                                                        {
+                                                            openedDirectoryData.SelectedItems.Add(selectedItemName);
+                                                        }
                                                     }
                                                 }
+                                                catch { }
                                             }
-                                            catch { }
+                                            while (!selectedItemsFound && stopwatch.ElapsedTicks - elapsedTicksOnSelectedItemsSearchStart <= maxSearchTimeForSelectedItemsTicks);
+
+
                                         }
 
                                         if (onFoundItemAction != null)

@@ -10,6 +10,8 @@ using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace FileExplorerInterceptor
@@ -54,10 +56,25 @@ namespace FileExplorerInterceptor
 
             ChangeToken.OnChange(() => configuration.GetReloadToken(), () => configuration.Bind(config));
 
-            // Register window open handler
+            // Register window created event handler
             winEventDelegate = new WinEventDelegate(OnWindowOpenHandler);
             winEventHook = User32.SetWinEventHook(User32.EVENT_OBJECT_CREATE, User32.EVENT_OBJECT_CREATE, IntPtr.Zero, winEventDelegate, 0, 0, User32.WINEVENT_OUTOFCONTEXT);
         }
+
+
+        void WindowHider(IntPtr hwnd, TimeSpan maxHidingTime, CancellationToken cancellationToken)
+        {
+            var maxHidingTimeTicks = maxHidingTime.Ticks;
+            var stopwatch = new Stopwatch();
+            stopwatch.Start();
+            do
+            {
+                // Moves the window to the bottom of the z-order, behind all other windows
+                User32.SetWindowPos(hwnd, User32.HWND_BOTTOM, 0, 0, 0, 0, User32.SWP_NOSIZE | User32.SWP_NOMOVE | User32.SWP_NOACTIVATE);
+            }
+            while (!cancellationToken.IsCancellationRequested && stopwatch.ElapsedTicks <= maxHidingTimeTicks);
+        }
+
 
         private void OnWindowOpenHandler(IntPtr hWinEventHook, uint eventType, IntPtr hwnd, int idObject, int idChild, uint dwEventThread, uint dwmsEventTime)
         {
@@ -72,14 +89,34 @@ namespace FileExplorerInterceptor
                     var process = Process.GetProcessById(pid.ToInt32());
                     if (process.ProcessName == "explorer")
                     {
+                        // Start task for hiding the file explorer window
+                        var tokenSource = new CancellationTokenSource();
+                        var hiderTask = Task.Run(() => WindowHider(hwnd, TimeSpan.FromSeconds(1), tokenSource.Token), tokenSource.Token);
+
                         // Try to get opened directory data and close the explorer windows if inside a directory
                         var openedDirectoryData = ShellReader.CloseFileExplorerIfDirectoryOpenedAndGetDirectoryPath(
-                            hwnd.ToInt32(), withSelectedItems: true, out bool foundWindow, searchUntilFound: true, maxSearchTime: TimeSpan.FromSeconds(1));
+                            hwnd.ToInt32(), withSelectedItems: true, out bool foundWindow,
+                            searchUntilFound: true, maxSearchTime: TimeSpan.FromSeconds(1), maxSearchTimeForSelectedItems: TimeSpan.FromMilliseconds(200));
 
                         if (openedDirectoryData != null
                             && !string.IsNullOrWhiteSpace(openedDirectoryData.Path))
                         {
-                            OpenApplicationWithDirecory(openedDirectoryData);
+                            tokenSource.Cancel();
+
+                            hiderTask.ContinueWith(_ =>
+                            {
+                                OpenApplicationWithDirecory(openedDirectoryData);
+                            });
+                        }
+                        else
+                        {
+                            tokenSource.Cancel();
+
+                            hiderTask.ContinueWith(_ =>
+                            {
+                                // Move window back to top (moved to bottom from the hider task)
+                                User32.SetWindowPos(hwnd, User32.HWND_TOP, 0, 0, 0, 0, User32.SWP_NOSIZE | User32.SWP_NOMOVE);
+                            });
                         }
                     }
                 }

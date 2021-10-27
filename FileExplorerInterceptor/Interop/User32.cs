@@ -23,5 +23,14 @@ namespace FileExplorerInterceptor.Interop
 
         [DllImport("user32.dll")]
         public static extern uint RealGetWindowClass(IntPtr hwnd, StringBuilder pszType, uint cchType);
+
+
+        public static IntPtr HWND_BOTTOM = new IntPtr(1);
+        public static IntPtr HWND_TOP = new IntPtr(0);
+        public static uint SWP_NOSIZE = 0x0001;
+        public static uint SWP_NOMOVE = 0x0002;
+        public static uint SWP_NOACTIVATE = 0x0010;
+        [DllImport("user32.dll")]
+        public static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int x, int Y, int cx, int cy, uint wFlags);
     }
 }
