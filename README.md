@@ -1,5 +1,9 @@
 # File Explorer Interceptor
  Intercept Windows File Explorer directory opening and open the directory in another file manager instead.
+ 
+ ![fei](https://user-images.githubusercontent.com/10236674/139499324-3802f5ba-24d1-4c33-aff2-3c7826d70d9c.gif)
+
+
 
 ## Why was this made?
 To provide a different solution (albeit not perfect again) for making a third party file manager application the default.
@@ -16,7 +20,9 @@ By doing this Windows uses this new command when the Windows Shell opens a new d
 
 #### The Problem
 
-When using this approach and using the option "Show in folder" in some apps there is a bug, which makes the directory opening very slow (more than 10 seconds) when the operation is performed a second time in a short period.
+First and foremost using this approach item selection on directory opening doesn't work, or at least not it some file managers.
+
+However, the real problem actually is that when using this approach and using the option "Show in folder" in some apps there is a bug, which makes the directory opening very slow (more than 10 seconds) when the operation is performed a second time in a short period.
 
 This problem probably happens only with Browsers *(Chrome, Firefox)* and Electron based apps *(Skype, Teams, Slack, Discord)* but I'm not completely sure. I had only one native app that has a "show in folder" option which uses the Windows Shell and it worked correctly there.
 
@@ -29,9 +35,6 @@ This is an application that only has a tray icon in the system tray (mainly for 
 - When a new file explorer window is created, the application checks what folder is opened and what files are selected *(through Shell Objects for Scripting API)*.
 
 - And if the file explorer window is inside a folder, the window is closed and the "replacement" application is opened in the given folder.
-
-![fei](https://user-images.githubusercontent.com/10236674/137642105-dd2131cc-3cea-418f-9dcd-56a98cff83dc.gif)
-
 
 Also, a good thing about this approach is that if an application starts the explorer.exe directly instead of using the Windows Shell *(with `explorer.exe /select,"C:\Windows\explorer.exe"` for example)*, the application replaces it with the defined file manager *(which the Registry edit for default Window Shell opening can't do, obvously)*.
 
@@ -72,14 +75,14 @@ The `<D>` and `<S>` are special strings that will be replaced with the ***D**ire
 
 For example, for the given command `-Directory "<D>" -Select "<S>"` and an opened directory `C:\Windows` with selected item `explorer.exe`, the command will be transformed to `-Directory "C:\Windows" -Select "explorer.exe"`.
 
-*Note: The default `appsettings.json` file in the application (which is the same as the above example) is configured for the "[Files](https://github.com/files-community/Files)" file manager, however the directory opening with a selected file is still not implemented for it and this was just an example created by me.
-When the functionallity is implemented by the "Files" file manager I will change the default configuration file and update this documentation if needed.*
+*Note: The default `appsettings.json` file in the application (which is the same as the above example) is configured for the ["Files" file manager](https://github.com/files-community/Files), however the directory opening with a selected item is still only available in the insider build.
+When the functionallity is merged into the main build, it will work for you without having to change the configuration.*
 
 ## Limitations
 
 1. There is a slight delay where the File Explorer is visible before it is closed, because until a newly created window is visible, it's state can't be changed (hid or minimized for example).
 
-    *Technically, there is a way to hook into the window creation and make it start hidden or minimized, but to do it globally, DLL injection will be needed which is a little hacky approach and I'm also not really familiar with that (for now).*
+    * I have also tried tinkering with hooking into the explorer process and intercepting the CreateWindow call to make it start hidden or atleast minimized, but that crashes the process. Also creating a global windows WH_CBT hook doesn't allow changes to the window or the explorer crashes again. I tested a WH_SHELL hook as well for window creation, but it isn't much faster that the Window Created event.*
 
 2. When a File Explorer is alredy opened in the given directory, Windows just focuses the existing window instead of creating a new one and thus our approach doesn't work.
 
