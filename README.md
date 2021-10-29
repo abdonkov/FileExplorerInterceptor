@@ -82,7 +82,7 @@ When the functionallity is merged into the main build, it will work for you with
 
 1. There is a slight delay where the File Explorer is visible before it is closed, because until a newly created window is visible, it's state can't be changed (hid or minimized for example).
 
-    * I have also tried tinkering with hooking into the explorer process and intercepting the CreateWindow call to make it start hidden or atleast minimized, but that crashes the process. Also creating a global windows WH_CBT hook doesn't allow changes to the window or the explorer crashes again. I tested a WH_SHELL hook as well for window creation, but it isn't much faster that the Window Created event.*
+    *I have also tried tinkering with hooking into the explorer process and intercepting the CreateWindow call to make it start hidden or atleast minimized, but that crashes the process. Also creating a global windows WH_CBT hook doesn't allow changes to the window or the explorer crashes again. I tested a WH_SHELL hook as well for window creation, but it isn't much faster that the Window Created event.*
 
 2. When a File Explorer is alredy opened in the given directory, Windows just focuses the existing window instead of creating a new one and thus our approach doesn't work.
 
