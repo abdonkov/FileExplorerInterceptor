@@ -75,8 +75,7 @@ The `<D>` and `<S>` are special strings that will be replaced with the ***D**ire
 
 For example, for the given command `-Directory "<D>" -Select "<S>"` and an opened directory `C:\Windows` with selected item `explorer.exe`, the command will be transformed to `-Directory "C:\Windows" -Select "explorer.exe"`.
 
-*Note: The default `appsettings.json` file in the application (which is the same as the above example) is configured for the ["Files" file manager](https://github.com/files-community/Files), however the directory opening with a selected item is still only available in the insider build.
-When the functionallity is merged into the main build, it will work for you without having to change the configuration.*
+*Note: The default `appsettings.json` file in the application (which is the same as the above example) is configured for the ["Files" file manager](https://github.com/files-community/Files).*
 
 ## Limitations
 
